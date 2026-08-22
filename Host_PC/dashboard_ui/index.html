@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Rescue Robot — Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<script src="/dashboard_ui/socket.io.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060b14;--sf:#0c1424;--sf2:#111d36;--bd:rgba(56,139,253,.15);--ac:#3b82f6;--ac2:#06b6d4;--gn:#22c55e;--rd:#ef4444;--or:#f97316;--yl:#eab308;--tx:#e2e8f0;--mt:#64748b;--gw:rgba(59,130,246,.3)}
+html,body{height:100%;font-family:'Outfit',sans-serif;background:var(--bg);color:var(--tx);overflow:hidden}
+.shell{display:grid;grid-template-rows:52px 1fr;height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:linear-gradient(90deg,#0a1628,#0d1e3d);border-bottom:1px solid var(--bd);z-index:10}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-ic{width:30px;height:30px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 12px var(--gw)}
+.logo-t{font-size:14px;font-weight:700}.logo-s{font-size:9px;color:var(--mt)}
+.hdr-r{display:flex;align-items:center;gap:14px}
+.clock{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ac2)}
+.badge{display:flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd);border-radius:100px;padding:4px 10px;font-size:10px;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--rd)}.dot.on{background:var(--gn)}
+.main{display:grid;grid-template-columns:1fr 220px;grid-template-rows:1fr 160px;gap:8px;padding:8px;height:calc(100vh - 52px)}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.card::before{content:'';position:absolute;inset:0;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,.03) 0%,transparent 60%);pointer-events:none}
+.card-t{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--mt);text-transform:uppercase;margin-bottom:8px}
+.card.alert{border-color:var(--rd)!important;box-shadow:0 0 16px rgba(239,68,68,.2)}
+.card.warn{border-color:var(--or)!important;box-shadow:0 0 16px rgba(249,115,22,.2)}
+.map-card{grid-column:1;grid-row:1}
+#map-canvas{width:100%;height:100%;border-radius:8px;background:#060d1c;display:block;cursor:crosshair}
+.sensor-panel{grid-column:2;grid-row:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.sensor-panel::-webkit-scrollbar{width:3px}.sensor-panel::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+.s-card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px}
+.s-card.alert{border-color:var(--rd);box-shadow:0 0 12px rgba(239,68,68,.12)}
+.s-card.warn{border-color:var(--or);box-shadow:0 0 12px rgba(249,115,22,.12)}
+.s-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.s-icon{font-size:18px}.s-title{font-size:9px;font-weight:700;letter-spacing:1px;color:var(--mt);text-transform:uppercase}
+.s-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;text-align:center;margin:2px 0}
+.s-sub{font-size:9px;color:var(--mt);text-align:center}
+.s-bar{height:3px;border-radius:3px;background:#1e293b;margin-top:4px;overflow:hidden}
+.s-fill{height:100%;border-radius:3px;transition:width .4s,background .4s}
+.bottom-row{grid-column:1/3;grid-row:2;display:grid;grid-template-columns:1fr 200px;gap:8px}
+.events-card{overflow:hidden;display:flex;flex-direction:column}
+.ev-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding-right:3px}
+.ev-list::-webkit-scrollbar{width:3px}.ev-list::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+.ev-item{display:flex;gap:6px;padding:4px 6px;border-radius:5px;background:rgba(255,255,255,.02);font-size:11px;align-items:center;border-left:3px solid var(--bd)}
+.ev-item.flame{border-left-color:var(--rd)}.ev-item.human{border-left-color:var(--or)}.ev-item.gas{border-left-color:var(--yl)}.ev-item.temp{border-left-color:#f43f5e}.ev-item.info{border-left-color:var(--ac)}
+.ev-time{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--mt);white-space:nowrap}
+.ev-msg{flex:1;font-size:10px}.ev-pos{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ac2);white-space:nowrap}
+.health-card{display:flex;flex-direction:column;gap:4px}
+.h-row{display:flex;align-items:center;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.h-lbl{font-size:9px;color:var(--mt);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.h-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.rssi-bar{height:5px;border-radius:3px;background:#1e293b;overflow:hidden}
+.rssi-fill{height:100%;border-radius:3px;background:var(--gn);transition:width .5s}
+#btn-rth{width:100%;padding:6px;border:1px solid var(--ac);background:rgba(59,130,246,.1);color:var(--ac);border-radius:6px;font-family:Outfit;font-weight:700;font-size:11px;cursor:pointer;letter-spacing:.5px;margin-top:auto}
+#btn-rth:hover{background:rgba(59,130,246,.25)}
+@keyframes flicker{from{opacity:1}to{opacity:.65}}.flicker{animation:flicker .35s infinite alternate}
+
+/* Legend */
+.legend{position:absolute;bottom:8px;left:8px;background:rgba(12,20,36,.9);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;z-index:5}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--mt)}
+.leg-dot{width:10px;height:10px;border-radius:50%}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <div class="logo"><div class="logo-ic">🤖</div><div><div class="logo-t">RESCUE ROBOT COMMAND</div><div class="logo-s">Cognitive Telemetry v2.1</div></div></div>
+  <div class="hdr-r"><div class="clock" id="clock">00:00:00</div><div class="badge"><div class="dot" id="conn-dot"></div><span id="conn-txt">Connecting…</span></div></div>
+</header>
+<div class="main">
+  <!-- Map -->
+  <div class="card map-card">
+    <div class="card-t">📍 Hybrid Map — Trail + RViz-Style Hazard Zones</div>
+    <canvas id="map-canvas"></canvas>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#06b6d4"></div>Robot Trail</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f97316"></div>Breadcrumbs</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ef4444"></div>🔥 Flame Zone</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#a855f7"></div>☁️ Toxic Gas</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#f97316"></div>🌡️ High Temp</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#06b6d4"></div>🧍 Human</div>
+    </div>
+  </div>
+  <!-- Sensors -->
+  <div class="sensor-panel">
+    <div class="s-card" id="sc-flame"><div class="s-head"><span class="s-icon">🔥</span><span class="s-title">Flame</span></div><div class="s-val" id="flame-val" style="color:var(--gn)">SAFE</div><div class="s-sub" id="flame-sub">No fire detected</div></div>
+    <div class="s-card" id="sc-human"><div class="s-head"><span class="s-icon">🧍</span><span class="s-title">Human Radar</span></div><div class="s-val" id="human-val" style="color:var(--mt)">---</div><div class="s-sub" id="human-sub">Scanning...</div></div>
+    <div class="s-card" id="sc-gas"><div class="s-head"><span class="s-icon">🌫️</span><span class="s-title">Air Quality</span></div><div class="s-val" id="gas-val" style="color:var(--gn)">---</div><div class="s-sub">ADC / 4095</div><div class="s-bar"><div class="s-fill" id="gas-fill" style="width:0%;background:var(--gn)"></div></div></div>
+    <div class="s-card" id="sc-temp"><div class="s-head"><span class="s-icon">🌡️</span><span class="s-title">Temperature</span></div><div class="s-val" id="temp-val" style="color:var(--gn)">---</div><div class="s-sub">°C (LM35)</div><div class="s-bar"><div class="s-fill" id="temp-fill" style="width:0%;background:var(--gn)"></div></div></div>
+    <div class="s-card"><div class="s-head"><span class="s-icon">📍</span><span class="s-title">Position</span></div><div style="display:flex;gap:6px;justify-content:center"><div style="text-align:center"><div class="s-sub">X</div><div class="s-val" id="pos-x" style="font-size:14px;color:var(--ac2)">0.00</div></div><div style="text-align:center"><div class="s-sub">Y</div><div class="s-val" id="pos-y" style="font-size:14px;color:var(--ac2)">0.00</div></div></div></div>
+  </div>
+  <!-- Bottom -->
+  <div class="bottom-row">
+    <div class="card events-card"><div class="card-t">📋 Events Log</div><div class="ev-list" id="ev-list"><div class="ev-item info"><span class="ev-time">--:--:--</span><span class="ev-msg">Waiting for connection…</span></div></div></div>
+    <div class="card health-card">
+      <div class="card-t">📡 System Health</div>
+      <div class="h-row"><span class="h-lbl">RSSI</span><span class="h-val" id="h-rssi">--- dBm</span></div>
+      <div class="rssi-bar"><div class="rssi-fill" id="rssi-fill" style="width:50%"></div></div>
+      <div class="h-row"><span class="h-lbl">Packets</span><span class="h-val" id="h-pkts">0</span></div>
+      <div class="h-row"><span class="h-lbl">Uptime</span><span class="h-val" id="h-up">0s</span></div>
+      <div class="h-row"><span class="h-lbl">Port</span><span class="h-val" id="h-port" style="font-size:9px">—</span></div>
+      <button id="btn-rth">🏠 RETURN TO HOME</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+function uc(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-GB',{hour12:false})}
+setInterval(uc,1000);uc();
+
+const cv=document.getElementById('map-canvas'),cx=cv.getContext('2d');
+let trail=[],bcList=[],markers=[],robotX=0,robotY=0,targetPt=null;
+
+// Pan & Zoom state
+let panX=0, panY=0, zoom=1.0, isDragging=false, dragStartX=0, dragStartY=0, dragDist=0;
+
+const colorMap={flame:'rgba(239,68,68,',gas_purple:'rgba(168,85,247,',gas_lime:'rgba(132,204,22,',
+  temp_red:'rgba(239,68,68,',temp_orange:'rgba(249,115,22,',human:'rgba(6,182,212,'};
+
+function rsz(){const r=cv.parentElement.getBoundingClientRect();cv.width=r.width-24;cv.height=r.height-36}
+window.addEventListener('resize',()=>{rsz();draw()});rsz();
+
+function mScale(){return Math.min(cv.width,cv.height)/24 * zoom}
+function w2c(x,y){const s=mScale();return[cv.width/2+x*s+panX, cv.height/2-y*s+panY]}
+function c2w(cx2,cy2){const s=mScale();return[(cx2-panX-cv.width/2)/s, (cv.height/2-cy2+panY)/s]}
+
+function draw(){
+  const W=cv.width,H=cv.height,sc=mScale();cx.clearRect(0,0,W,H);
+  // BG
+  const g=cx.createRadialGradient(W/2,H/2,0,W/2,H/2,W*.6);
+  g.addColorStop(0,'#0b1628');g.addColorStop(1,'#060d1c');cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  // Grid
+  cx.strokeStyle='rgba(59,130,246,.05)';cx.lineWidth=1;
+  const ox=W/2+panX,oy=H/2+panY;
+  for(let i=-100;i<=100;i++){cx.beginPath();cx.moveTo(ox+i*sc,0);cx.lineTo(ox+i*sc,H);cx.stroke()}
+  for(let j=-100;j<=100;j++){cx.beginPath();cx.moveTo(0,oy+j*sc);cx.lineTo(W,oy+j*sc);cx.stroke()}
+  cx.strokeStyle='rgba(59,130,246,.12)';cx.lineWidth=1.5;
+  cx.beginPath();cx.moveTo(ox,0);cx.lineTo(ox,H);cx.stroke();
+  cx.beginPath();cx.moveTo(0,oy);cx.lineTo(W,oy);cx.stroke();
+
+  // ── Hazard Zones (RViz-style cylinders as circles) ──
+  markers.forEach(m=>{
+    const[mx,my]=w2c(m.x,m.y);
+    const r=m.radius*sc; // radius in pixels
+    let baseCol;
+    if(m.kind==='flame') baseCol='239,68,68';
+    else if(m.kind==='gas') baseCol=m.color==='purple'?'168,85,247':'132,204,22';
+    else if(m.kind==='temp') baseCol=m.color==='#ff0000'?'239,68,68':'249,115,22';
+    else if(m.kind==='human') baseCol='6,182,212';
+    else baseCol='234,179,8';
+
+    // Outer glow
+    const glow=cx.createRadialGradient(mx,my,0,mx,my,r*1.3);
+    glow.addColorStop(0,`rgba(${baseCol},0.25)`);glow.addColorStop(0.7,`rgba(${baseCol},0.08)`);glow.addColorStop(1,`rgba(${baseCol},0)`);
+    cx.fillStyle=glow;cx.beginPath();cx.arc(mx,my,r*1.3,0,Math.PI*2);cx.fill();
+
+    // Zone circle (semi-transparent fill like RViz cylinder)
+    cx.beginPath();cx.arc(mx,my,r,0,Math.PI*2);
+    cx.fillStyle=`rgba(${baseCol},0.15)`;cx.fill();
+    cx.strokeStyle=`rgba(${baseCol},0.6)`;cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.stroke();cx.setLineDash([]);
+
+    // Icon
+    cx.font='14px sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+    cx.fillText(m.label,mx,my);
+    // Extra label
+    if(m.extra){cx.fillStyle=`rgba(226,232,240,.7)`;cx.font='600 9px Outfit';cx.fillText(m.extra,mx,my+18)}
+  });
+
+  // Trail
+  if(trail.length>1){
+    cx.beginPath();const[t0x,t0y]=w2c(trail[0].x,trail[0].y);cx.moveTo(t0x,t0y);
+    for(let i=1;i<trail.length;i++){const[tx,ty]=w2c(trail[i].x,trail[i].y);cx.lineTo(tx,ty)}
+    cx.strokeStyle='rgba(6,182,212,.45)';cx.lineWidth=2;cx.stroke();
+  }
+
+  // Breadcrumbs
+  bcList.forEach(b=>{const[bx,by]=w2c(b.x,b.y);cx.beginPath();cx.arc(bx,by,3,0,Math.PI*2);cx.fillStyle='rgba(249,115,22,.6)';cx.fill()});
+
+  // Target
+  if(targetPt){const[tx2,ty2]=w2c(targetPt.x,targetPt.y);cx.beginPath();cx.arc(tx2,ty2,7,0,Math.PI*2);cx.strokeStyle='#3b82f6';cx.lineWidth=2;cx.setLineDash([4,3]);cx.stroke();cx.setLineDash([]);cx.fillStyle='rgba(59,130,246,.2)';cx.fill();cx.font='600 9px Outfit';cx.fillStyle='#93c5fd';cx.textAlign='center';cx.fillText('TARGET',tx2,ty2-12)}
+
+  // Robot
+  const[rx2,ry2]=w2c(robotX,robotY);
+  const rG=cx.createRadialGradient(rx2,ry2,0,rx2,ry2,18);rG.addColorStop(0,'rgba(59,130,246,.35)');rG.addColorStop(1,'rgba(59,130,246,0)');
+  cx.fillStyle=rG;cx.beginPath();cx.arc(rx2,ry2,18,0,Math.PI*2);cx.fill();
+  cx.beginPath();cx.arc(rx2,ry2,7,0,Math.PI*2);cx.fillStyle='#3b82f6';cx.fill();cx.strokeStyle='#93c5fd';cx.lineWidth=2;cx.stroke();
+  cx.fillStyle='#fff';cx.beginPath();cx.arc(rx2,ry2-10,2,0,Math.PI*2);cx.fill();
+  cx.fillStyle='rgba(226,232,240,.8)';cx.font='600 9px Outfit';cx.textAlign='center';
+  cx.fillText(`(${robotX.toFixed(1)}, ${robotY.toFixed(1)})`,rx2,ry2+20);
+}
+draw();
+
+cv.addEventListener('mousedown',e=>{isDragging=true;dragDist=0;dragStartX=e.clientX-panX;dragStartY=e.clientY-panY;});
+window.addEventListener('mousemove',e=>{if(isDragging){dragDist++;panX=e.clientX-dragStartX;panY=e.clientY-dragStartY;draw();}});
+window.addEventListener('mouseup',()=>isDragging=false);
+
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=cv.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const oldZoom=zoom;
+  if(e.deltaY<0) zoom*=1.1; else zoom/=1.1;
+  zoom=Math.max(0.1,Math.min(zoom,20));
+  panX=mx-(mx-panX)*(zoom/oldZoom);
+  panY=my-(my-panY)*(zoom/oldZoom);
+  draw();
+});
+
+cv.addEventListener('click',e=>{if(dragDist>5)return;const rect=cv.getBoundingClientRect();const[wx,wy]=c2w(e.clientX-rect.left,e.clientY-rect.top);targetPt={x:+wx.toFixed(2),y:+wy.toFixed(2)};draw();socket.emit('goto',targetPt)});
+
+function addEvUI(ev){const el=document.getElementById('ev-list');const d=document.createElement('div');d.className=`ev-item ${ev.kind}`;let pos=ev.x!==null?`<span class="ev-pos">(${ev.x},${ev.y})</span>`:'';d.innerHTML=`<span class="ev-time">${ev.time}</span><span class="ev-msg">${ev.msg}</span>${pos}`;el.prepend(d);if(el.children.length>50)el.removeChild(el.lastChild)}
+
+const socket=io();
+socket.on('connect',()=>console.log('[WS] Connected'));
+socket.on('disconnect',()=>{document.getElementById('conn-dot').className='dot';document.getElementById('conn-txt').textContent='Disconnected'});
+socket.on('status',d=>{document.getElementById('conn-dot').className=d.connected?'dot on':'dot';document.getElementById('conn-txt').textContent=d.connected?`Online — ${d.port}`:'No Device';if(d.port)document.getElementById('h-port').textContent=d.port});
+
+socket.on('telemetry',d=>{
+  robotX=d.x;robotY=d.y;trail.push({x:d.x,y:d.y});if(trail.length>600)trail.shift();draw();
+  document.getElementById('pos-x').textContent=d.x.toFixed(2);
+  document.getElementById('pos-y').textContent=d.y.toFixed(2);
+  const fc=document.getElementById('sc-flame'),fv=document.getElementById('flame-val'),fs=document.getElementById('flame-sub');
+  if(d.flame){fv.textContent='🔥 ALERT';fv.style.color='var(--rd)';fv.classList.add('flicker');fs.textContent='FLAME DETECTED!';fc.classList.add('alert')}
+  else{fv.textContent='SAFE';fv.style.color='var(--gn)';fv.classList.remove('flicker');fs.textContent='No fire detected';fc.classList.remove('alert')}
+  const hc=document.getElementById('sc-human'),hv=document.getElementById('human-val'),hs=document.getElementById('human-sub');
+  if(d.human){hv.textContent=d.radar_dist+'cm';hv.style.color='var(--or)';hs.textContent='HUMAN DETECTED';hc.classList.add('warn')}
+  else{hv.textContent='---';hv.style.color='var(--mt)';hs.textContent='Scanning...';hc.classList.remove('warn')}
+  const gv=document.getElementById('gas-val'),gf=document.getElementById('gas-fill'),gc=document.getElementById('sc-gas');
+  gv.textContent=d.gas_adc;gf.style.width=(d.gas_adc/4095*100)+'%';
+  if(d.gas_adc>=650){gv.style.color='var(--rd)';gf.style.background='var(--rd)';gc.classList.add('alert')}else{gv.style.color='var(--gn)';gf.style.background='var(--gn)';gc.classList.remove('alert')}
+  const tv=document.getElementById('temp-val'),tf=document.getElementById('temp-fill'),tc=document.getElementById('sc-temp');
+  tv.textContent=d.temp+'°C';tf.style.width=(d.temp/80*100)+'%';
+  if(d.temp>=40){tv.style.color='var(--rd)';tf.style.background='var(--rd)';tc.classList.add('alert')}else{tv.style.color='var(--gn)';tf.style.background='var(--gn)';tc.classList.remove('alert')}
+  document.getElementById('h-pkts').textContent=d.packet_count;
+  const m=Math.floor(d.uptime/60),s2=d.uptime%60;document.getElementById('h-up').textContent=m>0?`${m}m ${s2}s`:`${s2}s`;
+});
+
+socket.on('rssi',d=>{
+  document.getElementById('h-rssi').textContent=d.rssi+' dBm';
+  const pct=Math.max(0,Math.min(100,(d.rssi+130)/80*100));
+  const fill=document.getElementById('rssi-fill');fill.style.width=pct+'%';
+  fill.style.background=pct>50?'var(--gn)':pct>25?'var(--yl)':'var(--rd)';
+});
+
+socket.on('event',ev=>addEvUI(ev));
+socket.on('breadcrumb',b=>bcList.push(b));
+
+// Marker management (RViz-style)
+socket.on('marker_add',m=>{markers.push(m);draw()});
+socket.on('marker_del',d=>{markers=markers.filter(m=>!(m.kind===d.kind&&m.id===d.id));draw()});
+socket.on('rth_trail',data=>{if(data.length>0){targetPt={x:data[0].x,y:data[0].y};draw()}});
+
+document.getElementById('btn-rth').addEventListener('click',()=>socket.emit('return_home'));
+</script>
+</body>
+</html>

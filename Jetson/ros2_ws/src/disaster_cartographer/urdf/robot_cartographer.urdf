@@ -1,0 +1,31 @@
+<?xml version="1.0" ?>
+<robot name="disaster_robot">
+
+  <!-- Base Link -->
+  <link name="base_link">
+  </link>
+
+  <!-- Laser Frame -->
+  <link name="laser_frame">
+  </link>
+
+  <!-- Joint connecting base_link to laser_frame -->
+  <joint name="base_to_laser" type="fixed">
+    <parent link="base_link"/>
+    <child link="laser_frame"/>
+    <origin xyz="0.0 0.0 0.1" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU Link -->
+  <link name="imu_link">
+  </link>
+
+  <!-- Joint connecting base_link to imu_link -->
+  <joint name="base_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <!-- 6cm front, 9cm left, 2cm below LiDAR (which is at z=0.1) -->
+    <origin xyz="0.06 0.09 0.08" rpy="0 0 3.14159"/>
+  </joint>
+
+</robot>
