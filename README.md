@@ -9,6 +9,11 @@ After an earthquake, phone and internet networks often fail within minutes, and 
 
 📄 **Project page:** [bajhaw.com/projects/offline-multi-sensor-ai-payload-for-usar](https://bajhaw.com/projects/offline-multi-sensor-ai-payload-for-usar)
 
+<p align="center">
+  <img src="docs/images/payload-prototype.jpg" alt="Payload prototype mounted on the robot" width="720"><br>
+  <em>The payload prototype: LiDAR, speaker, sensor board and a camera box carrying the thermal and visual cameras.</em>
+</p>
+
 ---
 
 ## Contents
@@ -36,6 +41,22 @@ After an earthquake, phone and internet networks often fail within minutes, and 
 
 The detector was trained on a lab-collected dataset of people lying down, partly hidden or in dim light, because public datasets mostly show people standing.
 
+<p align="center">
+  <img src="docs/images/training-dataset.jpg" alt="Samples from the lab-made training set" width="720"><br>
+  <em>Part of the lab-made training set: people in simulated disaster postures and lighting.</em>
+</p>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/detection-confirmed.jpg" alt="Thermal trigger confirming a partly hidden person"></td>
+    <td width="50%"><img src="docs/images/no-heat-mannequin.jpg" alt="Mannequin with no body heat, no alarm raised"></td>
+  </tr>
+  <tr>
+    <td><em>A person partly hidden under a desk: the thermal view (right) triggers the visual detector (left), which confirms the person.</em></td>
+    <td><em>A mannequin in front of the robot: with no body heat, nothing was triggered, so no false alarm was raised.</em></td>
+  </tr>
+</table>
+
 ## Key results
 
 All figures were measured in the lab on indoor research robots.
@@ -50,41 +71,34 @@ All figures were measured in the lab on indoor research robots.
 
 Because of these limits, the radar is used only as a **confirmation sensor** after a visual or audio trigger, never as a stand-alone search tool.
 
+<p align="center">
+  <img src="docs/images/power-chart.png" alt="Average power draw per operating phase" width="640"><br>
+  <em>Average power draw in each operating phase, measured on the Jetson TX2.</em>
+</p>
+
 ## System architecture
 
-```mermaid
-graph LR
-    subgraph Sensors
-        TH[Thermal camera]
-        CAM[RGB camera]
-        RAD[24 GHz radar]
-        MCU[STM32: gas / flame / temperature]
-        LID[RPLidar]
-    end
+<p align="center">
+  <img src="docs/images/architecture.png" alt="System architecture" width="640"><br>
+  <em>Sensors feed the detector and the decision state machine, which drives navigation, the voice assistant and LoRa alerts.</em>
+</p>
 
-    subgraph Jetson["Jetson TX2"]
-        MASTER[rescue_master_loop.py<br/>state machine]
-        YOLO[YOLO11 TensorRT<br/>victim detector]
-        VOICE[whisper.cpp → Gemma 3 1B → Piper]
-        ROS[ROS 2 Foxy in Docker<br/>Cartographer · Nav2 · explore_lite]
-    end
+<p align="center">
+  <img src="docs/images/operational-flow.png" alt="Operating loop" width="900"><br>
+  <em>The operating loop: thermal scan, wake the detector, confirm a victim, send a LoRa alert, then switch to voice mode and back to sleep.</em>
+</p>
 
-    subgraph Operator["Operator laptop"]
-        DASH[Flask / Socket.IO dashboard]
-        RVIZ[RViz]
-    end
+The speech and language models do not fit in memory together, so the state machine swaps them as needed.
 
-    TH -->|body heat| MASTER --> YOLO
-    CAM --> YOLO
-    RAD --> MASTER
-    YOLO -->|victim confirmed| VOICE
-    MCU -->|hazard markers| ROS
-    LID --> ROS
-    ROS -->|Wi-Fi: maps, video| RVIZ
-    MCU -->|LoRa: status packets| DASH
-```
+<p align="center">
+  <img src="docs/images/operations-map.jpg" alt="Command-centre dashboard" width="720"><br>
+  <em>The command-centre dashboard in a simulation run: robot trail, a flame alert zone and sensor readings.</em>
+</p>
 
-**Operating loop:** thermal scan → wake the detector → confirm a victim → send a LoRa alert → switch to voice mode → return to low-power scanning. The speech and language models do not fit in memory together, so the state machine swaps them as needed.
+<p align="center">
+  <img src="docs/images/simulation-rviz.jpg" alt="Gazebo simulation and RViz occupancy map" width="720"><br>
+  <em>Gazebo simulation (left) and the live occupancy map in RViz (right).</em>
+</p>
 
 ## Hardware
 
@@ -93,6 +107,19 @@ graph LR
 - **Perception:** FLIR Lepton 3 thermal camera, RGB camera, 24 GHz radar module, RPLidar
 - **Sensor board:** STM32F411 "BlackPill" with gas, flame, temperature and IMU sensors
 - **Radio:** SX1278 LoRa modules (robot and ground station)
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/platform-turtlebot3.jpg" alt="Payload on a TurtleBot3 Waffle Pi"></td>
+    <td width="33%"><img src="docs/images/platform-kobuki.jpg" alt="Payload on a TurtleBot2 Kobuki"></td>
+    <td width="33%"><img src="docs/images/sensor-board.jpg" alt="STM32 sensor board"></td>
+  </tr>
+  <tr>
+    <td><em>On a TurtleBot3 Waffle Pi, the main test platform.</em></td>
+    <td><em>On a TurtleBot2 Kobuki, used to check portability.</em></td>
+    <td><em>The STM32 sensor board with gas, flame, temperature and motion sensors and the LoRa radio.</em></td>
+  </tr>
+</table>
 
 ## Repository structure
 
