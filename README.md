@@ -10,7 +10,7 @@ After an earthquake, phone and internet networks often fail within minutes, and 
 📄 **Project page:** [bajhaw.com/projects/offline-multi-sensor-ai-payload-for-usar](https://bajhaw.com/projects/offline-multi-sensor-ai-payload-for-usar)
 
 <p align="center">
-  <img src="docs/images/payload-prototype.jpg" alt="Payload prototype mounted on the robot" width="720"><br>
+  <img src="docs/images/payload-prototype.jpg" alt="Payload prototype mounted on the robot" width="440"><br>
   <em>The payload prototype: LiDAR, speaker, sensor board and a camera box carrying the thermal and visual cameras.</em>
 </p>
 
@@ -42,7 +42,7 @@ After an earthquake, phone and internet networks often fail within minutes, and 
 The detector was trained on a lab-collected dataset of people lying down, partly hidden or in dim light, because public datasets mostly show people standing.
 
 <p align="center">
-  <img src="docs/images/training-dataset.jpg" alt="Samples from the lab-made training set" width="720"><br>
+  <img src="docs/images/training-dataset.jpg" alt="Samples from the lab-made training set" width="560"><br>
   <em>Part of the lab-made training set: people in simulated disaster postures and lighting.</em>
 </p>
 
